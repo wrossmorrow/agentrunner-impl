@@ -1,0 +1,33 @@
+apiVersion: agentic.example.io/v1alpha1
+kind: AgenticRunnerDeployment
+metadata:
+  name: github-agent-runner-release
+  namespace: actions-runners
+spec:
+  runner:
+    githubConfigUrl: https://github.com/wrossmorrow/github-agent-runner
+    githubConfigSecret: arc-github-auth
+    runnerScaleSetName: github-agent-runner-release
+    minRunners: 0
+    maxRunners: 1
+  toolchainRef:
+    name: go-1.26
+  agent:
+    harness: pi
+    mode: read-only
+    model: thinkingmachines/Inkling-2-Mini
+    gateway:
+      endpoint: http://agent-router.ai-gateway.svc.cluster.local:8080/v1
+      authSecretRef:
+        name: agent-gateway-token-github-agent-runner
+    limits:
+      maxTurns: 40
+      maxDuration: 10m
+      maxCostUsd: 2.00
+      contextWindow: 131072
+      maxTokens: 16384
+      maxTransportRetries: 2
+    systemPromptRef:
+      configMapName: release-notes-policy
+    githubAppSecretRef:
+      name: release-bot-app

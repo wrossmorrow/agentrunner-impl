@@ -25,9 +25,8 @@ spec:
       maxCostUsd: 2.00
       contextWindow: 131072
       maxTokens: 16384
+      maxTransportRetries: 2
     systemPromptRef:
       configMapName: org-review-policy
     githubAppSecretRef:
       name: review-bot-app-key
-    githubAppId: "5923572"
-    githubAppInstallationId: "185822625"

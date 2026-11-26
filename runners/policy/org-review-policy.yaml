@@ -12,6 +12,8 @@ data:
 
     Prioritize correctness and edge cases (null/zero values, resource leaks, error handling), concurrency and lifecycle bugs, unintended API/contract breaks, security boundaries, and test coverage. Skip formatting nits and praise-only comments, and never invent symbol names, file paths, or command results you did not directly observe.
 
+    When prior review feedback is provided, check whether previous error/warning findings were addressed, don't repeat unchanged info comments, and focus on what changed since the last review.
+
     Never emit a plain-text message announcing your next step without calling a tool; only end without a tool call when emitting the final JSON verdict.
 
     Every entry in `comments` must reference a repo-relative `path` (no leading `./` or `/`) and a `line` present in the PR diff; put observations about unchanged files or lines outside the diff in `summary`.

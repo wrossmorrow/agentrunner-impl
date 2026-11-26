@@ -33,7 +33,7 @@ arc-install version="0.11.0":
     helm "${args[@]}"
 
 # Install or upgrade agentrunner-controller (including CRDs)
-agentrunner-install version="0.0.5":
+agentrunner-install version="0.0.7":
     helm show crds \
         oci://ghcr.io/wrossmorrow/charts/agentrunner-controller \
         --version {{version}} \
