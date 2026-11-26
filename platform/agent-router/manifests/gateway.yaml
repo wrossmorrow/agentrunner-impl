@@ -45,6 +45,7 @@ spec:
               bytes_received: "%BYTES_RECEIVED%"
               bytes_sent: "%BYTES_SENT%"
               upstream_host: "%UPSTREAM_HOST%"
+              upstream_protocol: "%UPSTREAM_PROTOCOL%"
               upstream_transport_failure: "%UPSTREAM_TRANSPORT_FAILURE_REASON%"
               github_repo: "%REQ(X-GITHUB-REPO)%"
               github_run_id: "%REQ(X-GITHUB-RUN-ID)%"

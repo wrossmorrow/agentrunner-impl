@@ -14,13 +14,13 @@ spec:
     name: go-1.26
   agent:
     harness: pi
-    model: RecursiveSI/flint
+    model: thinkingmachines/Inkling-2-Mini
     gateway:
       endpoint: http://agent-router.ai-gateway.svc.cluster.local:8080/v1
       authSecretRef:
         name: agent-gateway-token-github-agent-runner
     limits:
-      maxTurns: 25
+      maxTurns: 100
       maxDuration: 10m
       maxCostUsd: 2.00
       contextWindow: 131072

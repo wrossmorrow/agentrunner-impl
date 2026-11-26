@@ -46,7 +46,7 @@ GitHub Actions PR ──(outbound poll)──> GKE Autopilot (CPU-only, scale-to
 ├── platform/
 │   ├── justfile                                # check, infisical-*, arc-install, agentrunner-install, gateway-*, sync, status
 │   ├── arc/values.yaml                         # ARC v2 gha-runner-scale-set-controller values
-│   ├── agentrunner/values.yaml                 # agentrunner-controller values (ghcr.io/wrossmorrow/agentrunner-github-auth:0.0.2)
+│   ├── agentrunner/values.yaml                 # agentrunner-controller values (ghcr.io/wrossmorrow/agentrunner-github-auth:0.0.5)
 │   ├── infisical/
 │   │   ├── values.yaml                         # infisical-helm-charts/secrets-operator values
 │   │   └── manifests/
@@ -66,7 +66,7 @@ GitHub Actions PR ──(outbound poll)──> GKE Autopilot (CPU-only, scale-to
     ├── namespace.yaml                          # actions-runners namespace
     ├── secrets.yaml                            # InfisicalStaticSecrets for ARC, review bot, and gateway token
     ├── policy/org-review-policy.yaml           # ConfigMap (00-base.md) with read-only review + JSON verdict schema
-    ├── toolchains/go-1.26.yaml                 # AgenticRunnerToolchain (agentrunner-golang:0.0.2)
+    ├── toolchains/go-1.26.yaml                 # AgenticRunnerToolchain (agentrunner-golang:0.0.5)
     └── deployments/go-reviewer.yaml            # AgenticRunnerDeployment -> agent-router.ai-gateway.svc.cluster.local:8080/v1
 ```
 
