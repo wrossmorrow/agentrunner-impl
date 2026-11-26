@@ -39,13 +39,16 @@ spec:
       kind: Gateway
       name: agent-router
   timeout:
+    tcp:
+      connectTimeout: 10s
     http:
       requestTimeout: 180s
+      connectionIdleTimeout: 30s
   connection:
     bufferLimit: 32Mi
   requestBuffer:
     limit: 32Mi
-    mode: LimitOnly
+    mode: BufferAndLimit
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
