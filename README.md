@@ -2,6 +2,8 @@
 
 Scale-to-zero cloud deployment of [`agentrunner`](https://github.com/wrossmorrow/github-agent-runner) on **GKE Autopilot** (CPU-only) backed by **Recursive's `flint`** and **Thinking Machines' `Inkling-2-Mini`** running serverless on **Modal** (scale-to-zero GPU), fronted by **Envoy Gateway + Agent Router (Envoy AI Gateway)** and synced via **Infisical**.
 
+> See [docs/inference-and-scaling.md](docs/inference-and-scaling.md) for measured cold-start / GPU snapshot benchmarks, failover trade-offs, and a personal vs. 100-person engineering team cost & architecture comparison.
+
 ```text
 GitHub Actions PR ──(outbound poll)──> GKE Autopilot (CPU-only, scale-to-zero runners)
                                          ├── arc-systems: ARC v2 controller + listener
@@ -24,6 +26,8 @@ GitHub Actions PR ──(outbound poll)──> GKE Autopilot (CPU-only, scale-to
 .
 ├── PLAN.md
 ├── README.md
+├── docs/
+│   └── inference-and-scaling.md                # Cold-start data, failover trade-offs, personal vs. 100-person scale
 ├── justfile                                    # Root module entrypoint (modal, terraform, platform, runners)
 ├── modal/
 │   ├── justfile                                # sync, check, auth, flint & inkling download/deploy/smoke-test/logs/stop
@@ -88,7 +92,7 @@ Create a Machine Identity (Universal Auth, read-only `Viewer` role on your Infis
 | `/ai-gateway` | `FLINT_API_KEY`, `INKLING_API_KEY` | `ai-gateway/flint-modal-api-key`, `ai-gateway/inkling-modal-api-key` (each templated as `apiKey`) |
 | `/actions-runners/arc-github-auth` | `github_app_id`, `github_app_installation_id`, `github_app_private_key` | `actions-runners/arc-github-auth` |
 | `/actions-runners/review-bot-app-key` | `private-key.pem` | `actions-runners/review-bot-app-key` |
-| `/actions-runners/agent-gateway-token` | `token` | `actions-runners/agent-gateway-token` + `ai-gateway/agent-router-clients` (`go-reviewer: Bearer ...`) |
+| `/actions-runners/agent-gateway-token` | `token` | `actions-runners/agent-gateway-token` + `ai-gateway/agent-router-clients` (`go-reviewer`) |
 
 ---
 
