@@ -53,7 +53,19 @@ spec:
       connectTimeout: 10s
     http:
       requestTimeout: 180s
-      connectionIdleTimeout: 30s
+      connectionIdleTimeout: 5s
+  retry:
+    numRetries: 2
+    perRetry:
+      timeout: 180s
+    retryOn:
+      triggers:
+        - reset
+        - connect-failure
+        - retriable-status-codes
+      httpStatusCodes:
+        - 502
+        - 503
   connection:
     bufferLimit: 32Mi
   requestBuffer:

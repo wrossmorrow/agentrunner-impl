@@ -1,13 +1,13 @@
 apiVersion: agentic.example.io/v1alpha1
 kind: AgenticRunnerDeployment
 metadata:
-  name: go-reviewer
+  name: envoy-extproc-sdk-go
   namespace: actions-runners
 spec:
   runner:
     githubConfigUrl: https://github.com/wrossmorrow/envoy-extproc-sdk-go
     githubConfigSecret: arc-github-auth
-    runnerScaleSetName: agentic-go-review
+    runnerScaleSetName: envoy-extproc-sdk-go-review
     minRunners: 0
     maxRunners: 2
   toolchainRef:
@@ -18,7 +18,7 @@ spec:
     gateway:
       endpoint: http://agent-router.ai-gateway.svc.cluster.local:8080/v1
       authSecretRef:
-        name: agent-gateway-token
+        name: agent-gateway-token-envoy-extproc-sdk-go
     limits:
       maxTurns: 25
       maxDuration: 10m

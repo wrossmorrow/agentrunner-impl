@@ -1,0 +1,33 @@
+apiVersion: agentic.example.io/v1alpha1
+kind: AgenticRunnerDeployment
+metadata:
+  name: github-agent-runner
+  namespace: actions-runners
+spec:
+  runner:
+    githubConfigUrl: https://github.com/wrossmorrow/github-agent-runner
+    githubConfigSecret: arc-github-auth
+    runnerScaleSetName: github-agent-runner-review
+    minRunners: 0
+    maxRunners: 2
+  toolchainRef:
+    name: go-1.26
+  agent:
+    harness: pi
+    model: RecursiveSI/flint
+    gateway:
+      endpoint: http://agent-router.ai-gateway.svc.cluster.local:8080/v1
+      authSecretRef:
+        name: agent-gateway-token-github-agent-runner
+    limits:
+      maxTurns: 25
+      maxDuration: 10m
+      maxCostUsd: 2.00
+      contextWindow: 131072
+      maxTokens: 16384
+    systemPromptRef:
+      configMapName: org-review-policy
+    githubAppSecretRef:
+      name: review-bot-app-key
+    githubAppId: "5923572"
+    githubAppInstallationId: "185822625"
