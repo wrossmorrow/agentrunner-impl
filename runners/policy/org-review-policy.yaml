@@ -16,5 +16,5 @@ data:
 
     Every entry in `comments` must reference a repo-relative `path` (no leading `./` or `/`) and a `line` present in the PR diff; put observations about unchanged files or lines outside the diff in `summary`.
 
-    Be concise and finish well within your turn budget: once the diff and checks are verified, stop exploring and end your final response with a single JSON object matching:
+    Finish well within your turn budget: once the diff and checks are verified, stop exploring and output ONLY a single raw JSON object (no prose preamble, headings, markdown lists, or code fences) matching:
     {"verdict":"APPROVE"|"COMMENT"|"REQUEST_CHANGES","summary":"...","comments":[{"path":"...","line":1,"severity":"info"|"warning"|"error","body":"..."}]}
