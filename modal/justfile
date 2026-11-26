@@ -21,13 +21,15 @@ lint:
 
 # Typecheck Python sources with mypy
 typecheck:
-    uv run mypy flint_server.py smoke_test.py
+    uv run mypy flint_server.py inkling_server.py smoke_test.py
 
-# Compile and verify flint_server imports under bf16 and nvfp4 configs
+# Compile and verify server imports under flint and inkling configs
 verify-imports:
-    uv run python -m py_compile flint_server.py smoke_test.py
+    uv run python -m py_compile flint_server.py inkling_server.py smoke_test.py
     PYTHONPATH=. FLINT_VARIANT=bf16 uv run python -c "import flint_server; print(flint_server.APP_NAME, flint_server.GPU)"
     PYTHONPATH=. FLINT_VARIANT=nvfp4 FLINT_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import flint_server; print(flint_server.APP_NAME, flint_server.GPU, flint_server.ENABLE_GPU_SNAPSHOT)"
+    PYTHONPATH=. uv run python -c "import inkling_server; print(inkling_server.APP_NAME, inkling_server.GPU, inkling_server.ENABLE_DSPARK)"
+    PYTHONPATH=. INKLING_GPU=B200 INKLING_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import inkling_server; print(inkling_server.APP_NAME, inkling_server.GPU, inkling_server.ENABLE_GPU_SNAPSHOT)"
 
 # Run all code quality and import checks
 check: fmt-check lint typecheck verify-imports
@@ -81,3 +83,51 @@ logs variant="bf16":
 # Stop the deployed Modal flint app
 stop variant="bf16":
     uv run modal app stop flint-{{variant}}
+
+# Create or update the Modal secret holding INKLING_API_KEY (falls back to .env INKLING_API_KEY)
+inkling-secret api_key="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    key="{{api_key}}"
+    if [[ -z "$key" ]]; then
+        key="${INKLING_API_KEY:-}"
+    fi
+    if [[ -z "$key" ]]; then
+        echo "Error: pass api_key=... or set INKLING_API_KEY in modal/.env" >&2
+        exit 1
+    fi
+    uv run modal secret create inkling-api-key "INKLING_API_KEY=$key" --force
+
+# Pre-download thinkingmachines/Inkling-2-Mini weights to the persistent Modal volume
+inkling-download:
+    uv run modal run inkling_server.py::download_weights
+
+# Deploy the Modal serverless Inkling-2-Mini endpoint
+inkling-deploy gpu="" snapshot="0" dspark="1":
+    INKLING_GPU={{gpu}} INKLING_ENABLE_GPU_SNAPSHOT={{snapshot}} INKLING_ENABLE_DSPARK={{dspark}} uv run modal deploy inkling_server.py
+
+# Run standalone smoke test against the deployed Inkling-2-Mini endpoint
+inkling-smoke-test url="" api_key="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target_url="{{url}}"
+    target_key="{{api_key}}"
+    if [[ -z "$target_url" ]]; then
+        target_url="${INKLING_URL:-${INKLING_VLLM_URL:-}}"
+    fi
+    if [[ -z "$target_key" ]]; then
+        target_key="${INKLING_API_KEY:-}"
+    fi
+    if [[ -z "$target_url" || -z "$target_key" ]]; then
+        echo "Error: pass url/api_key or set INKLING_URL (or INKLING_VLLM_URL) and INKLING_API_KEY in modal/.env" >&2
+        exit 1
+    fi
+    uv run python smoke_test.py --model thinkingmachines/Inkling-2-Mini --url "$target_url" --api-key "$target_key"
+
+# Tail logs for the deployed Modal Inkling-2-Mini app
+inkling-logs:
+    uv run modal app logs inkling-2-mini
+
+# Stop the deployed Modal Inkling-2-Mini app
+inkling-stop:
+    uv run modal app stop inkling-2-mini

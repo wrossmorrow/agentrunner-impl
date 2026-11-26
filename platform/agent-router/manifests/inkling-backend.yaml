@@ -1,0 +1,54 @@
+# External Modal endpoint for thinkingmachines/Inkling-2-Mini.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: inkling-modal
+  namespace: ai-gateway
+spec:
+  endpoints:
+    - fqdn:
+        hostname: morrowwr--inkling-2-mini-inklingserver-serve.us-east.modal.run
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: inkling-modal-tls
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: inkling-modal
+  validation:
+    wellKnownCACertificates: System
+    hostname: morrowwr--inkling-2-mini-inklingserver-serve.us-east.modal.run
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: inkling-modal
+  namespace: ai-gateway
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: inkling-modal
+---
+# Secret "inkling-modal-api-key" (key: "apiKey") is templated by Infisical from INKLING_API_KEY.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: inkling-modal-auth
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: inkling-modal
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: inkling-modal-api-key

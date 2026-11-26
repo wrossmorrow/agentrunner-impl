@@ -26,6 +26,16 @@ spec:
         backendRequest: 180s
       backendRefs:
         - name: flint-modal
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: thinkingmachines/Inkling-2-Mini
+      timeouts:
+        request: 180s
+        backendRequest: 180s
+      backendRefs:
+        - name: inkling-modal
 ---
 # Allow >=180s for Modal scale-from-zero cold starts (~85s cached).
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -62,3 +72,24 @@ spec:
       name: agent-router
   connection:
     bufferLimit: 32Mi
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: agent-router-inbound-auth
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agent-router
+  apiKeyAuth:
+    credentialRefs:
+      - group: ""
+        kind: Secret
+        name: agent-router-clients
+    extractFrom:
+      - headers:
+          - Authorization
+    forwardClientIDHeader: x-client-id
+    sanitize: true
