@@ -50,6 +50,11 @@ vllm_env = {
     "VLLM_CACHE_ROOT": "/root/.cache/vllm",
     "FLASHINFER_WORKSPACE_BASE": "/cache/flashinfer",
     "FLASHINFER_CACHE_DIR": "/cache/flashinfer/.cache/flashinfer",
+    "INKLING_MAX_MODEL_LEN": str(MAX_MODEL_LEN),
+    "INKLING_GPU_MEMORY_UTILIZATION": str(GPU_MEMORY_UTILIZATION),
+    "INKLING_ENABLE_DSPARK": "1" if ENABLE_DSPARK else "0",
+    "INKLING_ENABLE_GPU_SNAPSHOT": "1" if ENABLE_GPU_SNAPSHOT else "0",
+    "INKLING_SECRET_NAME": SECRET_NAME,
 }
 if ENABLE_GPU_SNAPSHOT:
     vllm_env.update(
@@ -239,10 +244,12 @@ class InklingServer:
         def start_and_snapshot(self) -> None:
             api_key = self._start_vllm()
             self._warmup_and_sleep(api_key)
+            print("GPU snapshot capture: vLLM warmed up and put to sleep")
 
         @modal.enter(snap=False)
         def wake_up_server(self) -> None:
             self._wake_up()
+            print("GPU snapshot restore: vLLM woken up and healthy")
 
     else:
 
