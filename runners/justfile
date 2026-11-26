@@ -1,0 +1,41 @@
+default:
+    @just --list
+
+# Validate YAML syntax for all runner manifests
+check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ruby -ryaml -e '
+      files = Dir.glob("**/*.yaml").sort
+      abort("No YAML files found") if files.empty?
+      files.each do |f|
+        YAML.load_stream(File.read(f))
+        puts "OK #{f}"
+      end
+    '
+
+# Ensure actions-runners namespace and InfisicalStaticSecrets are applied
+apply-secrets:
+    kubectl apply -f namespace.yaml
+    kubectl apply -f secrets.yaml
+
+# Apply org review policy ConfigMap
+apply-policy:
+    kubectl apply -f namespace.yaml
+    kubectl apply -f policy/
+
+# Apply AgenticRunnerToolchains
+apply-toolchains:
+    kubectl apply -f toolchains/
+
+# Apply AgenticRunnerDeployments
+apply-deployments:
+    kubectl apply -f deployments/
+
+# Apply all runner resources (secrets, policy, toolchains, deployments)
+apply: apply-secrets apply-policy apply-toolchains apply-deployments
+
+# Show runner CRs, synced secrets, pods, and generated NetworkPolicies
+status:
+    kubectl get artc
+    kubectl get ard,autoscalingrunnersets,ephemeralrunners,pods,networkpolicy,infisicalstaticsecret,secret -n actions-runners

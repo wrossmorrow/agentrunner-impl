@@ -1,0 +1,152 @@
+set dotenv-load
+
+default:
+    @just --list
+
+# Validate YAML syntax for all platform Helm values and manifests
+check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ruby -ryaml -e '
+      files = Dir.glob("{arc,agentrunner,agent-router,infisical}/**/*.yaml").sort
+      abort("No YAML files found") if files.empty?
+      files.each do |f|
+        YAML.load_stream(File.read(f))
+        puts "OK #{f}"
+      end
+    '
+
+# Install or upgrade ARC v2 gha-runner-scale-set-controller
+arc-install version="0.11.0":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    args=(
+        upgrade --install arc
+        oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+        --namespace arc-systems
+        --create-namespace
+        -f arc/values.yaml
+    )
+    if [[ -n "{{version}}" ]]; then
+        args+=(--version "{{version}}")
+    fi
+    helm "${args[@]}"
+
+# Install or upgrade agentrunner-controller (including CRDs)
+agentrunner-install version="0.0.2":
+    helm show crds \
+        oci://ghcr.io/wrossmorrow/charts/agentrunner-controller \
+        --version {{version}} \
+        | kubectl apply --server-side --force-conflicts -f -
+    helm upgrade --install agentrunner-controller \
+        oci://ghcr.io/wrossmorrow/charts/agentrunner-controller \
+        --version {{version}} \
+        --namespace agentrunner-system \
+        --create-namespace \
+        -f agentrunner/values.yaml
+
+# Install or upgrade Envoy Gateway and Envoy AI Gateway
+gateway-install eg_version="v1.10.0" aieg_version="v1.3.0":
+    helm template eg-crd \
+        oci://docker.io/envoyproxy/gateway-crds-helm \
+        --version {{eg_version}} \
+        --set crds.gatewayAPI.enabled=false \
+        --set crds.envoyGateway.enabled=true \
+        | kubectl apply --server-side --force-conflicts -f -
+    helm upgrade --install eg \
+        oci://docker.io/envoyproxy/gateway-helm \
+        --version {{eg_version}} \
+        --namespace envoy-gateway-system \
+        --create-namespace \
+        --skip-crds \
+        -f agent-router/envoy-gateway-values.yaml
+    helm template aieg-crd \
+        oci://docker.io/envoyproxy/ai-gateway-crds-helm \
+        --version {{aieg_version}} \
+        | kubectl apply --server-side --force-conflicts -f -
+    helm upgrade --install aieg \
+        oci://docker.io/envoyproxy/ai-gateway-helm \
+        --version {{aieg_version}} \
+        --namespace envoy-ai-gateway-system \
+        --create-namespace \
+        -f agent-router/ai-gateway-values.yaml
+    kubectl wait --timeout=3m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+    kubectl wait --timeout=3m -n envoy-ai-gateway-system deployment/ai-gateway-controller --for=condition=Available
+
+# Apply Agent Router Gateway, Backend, and AIGatewayRoute manifests
+gateway-routes:
+    kubectl apply -f agent-router/manifests/
+
+# Create or update the ai-gateway/flint-modal-api-key Secret (falls back to modal/.env FLINT_API_KEY)
+flint-secret api_key="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    key="{{api_key}}"
+    if [[ -z "$key" ]]; then
+        key="${FLINT_API_KEY:-}"
+    fi
+    if [[ -z "$key" && -f ../modal/.env ]]; then
+        key="$(grep -E '^FLINT_API_KEY=' ../modal/.env | head -n1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+    fi
+    if [[ -z "$key" ]]; then
+        echo "Error: pass api_key=... or set FLINT_API_KEY in modal/.env" >&2
+        exit 1
+    fi
+    kubectl apply -f agent-router/manifests/namespace.yaml
+    kubectl create secret generic flint-modal-api-key \
+        --namespace ai-gateway \
+        --from-literal="apiKey=$key" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+# Install or upgrade the Infisical Kubernetes Secrets Operator
+infisical-install:
+    helm repo add infisical-helm-charts https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/ --force-update
+    helm repo update infisical-helm-charts
+    helm upgrade --install infisical-operator infisical-helm-charts/secrets-operator \
+        --namespace infisical-operator-system \
+        --create-namespace \
+        -f infisical/values.yaml
+    kubectl wait --timeout=3m -n infisical-operator-system deployment --all --for=condition=Available
+
+# Create or update the Universal Auth bootstrap Secret (reads args, env, or ../.env)
+infisical-auth client_id="" client_secret="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cid="{{client_id}}"
+    csec="{{client_secret}}"
+    if [[ -z "$cid" ]]; then cid="${INFISICAL_CLIENT_ID:-}"; fi
+    if [[ -z "$csec" ]]; then csec="${INFISICAL_CLIENT_SECRET:-}"; fi
+    if [[ -z "$cid" && -f ../.env ]]; then
+        cid="$(grep -E '^INFISICAL_CLIENT_ID=' ../.env | head -n1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+    fi
+    if [[ -z "$csec" && -f ../.env ]]; then
+        csec="$(grep -E '^INFISICAL_CLIENT_SECRET=' ../.env | head -n1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+    fi
+    if [[ -z "$cid" || -z "$csec" ]]; then
+        echo "Error: pass client_id/client_secret or set INFISICAL_CLIENT_ID and INFISICAL_CLIENT_SECRET in ../.env" >&2
+        exit 1
+    fi
+    kubectl create namespace infisical-operator-system --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create secret generic infisical-universal-auth \
+        --namespace infisical-operator-system \
+        --from-literal="clientId=$cid" \
+        --from-literal="clientSecret=$csec" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+# Apply InfisicalConnection, InfisicalAuth, and InfisicalStaticSecret manifests
+infisical-apply:
+    kubectl apply -f agent-router/manifests/namespace.yaml
+    kubectl apply -f infisical/manifests/
+
+# Install all platform charts and apply Agent Router manifests
+sync: arc-install agentrunner-install gateway-install gateway-routes
+
+# Show status of platform controllers and AI Gateway resources
+status:
+    kubectl get pods -n arc-systems
+    kubectl get pods -n agentrunner-system
+    kubectl get pods -n envoy-gateway-system
+    kubectl get pods -n envoy-ai-gateway-system
+    kubectl get pods -n infisical-operator-system
+    kubectl get infisicalconnection,infisicalauth -n infisical-operator-system
+    kubectl get pods,svc,gateway,aigatewayroute,infisicalstaticsecret -n ai-gateway

@@ -1,0 +1,13 @@
+# Helm values for oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+# Install with release name "arc" in namespace "arc-systems" so its ServiceAccount is
+# "arc-gha-rs-controller", matching agentrunner-controller's default arcControllerServiceAccount.
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

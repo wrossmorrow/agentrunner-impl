@@ -1,0 +1,10 @@
+# Helm values for oci://docker.io/envoyproxy/ai-gateway-helm
+
+controller:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

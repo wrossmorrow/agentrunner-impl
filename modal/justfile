@@ -1,0 +1,83 @@
+set dotenv-load
+
+default:
+    @just --list
+
+# Sync Python dependencies (including dev tools)
+sync:
+    uv sync
+
+# Format code with ruff
+fmt:
+    uv run ruff format .
+
+# Check formatting with ruff
+fmt-check:
+    uv run ruff format --check .
+
+# Lint code with ruff
+lint:
+    uv run ruff check .
+
+# Typecheck Python sources with mypy
+typecheck:
+    uv run mypy flint_server.py smoke_test.py
+
+# Compile and verify flint_server imports under bf16 and nvfp4 configs
+verify-imports:
+    uv run python -m py_compile flint_server.py smoke_test.py
+    PYTHONPATH=. FLINT_VARIANT=bf16 uv run python -c "import flint_server; print(flint_server.APP_NAME, flint_server.GPU)"
+    PYTHONPATH=. FLINT_VARIANT=nvfp4 FLINT_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import flint_server; print(flint_server.APP_NAME, flint_server.GPU, flint_server.ENABLE_GPU_SNAPSHOT)"
+
+# Run all code quality and import checks
+check: fmt-check lint typecheck verify-imports
+
+# Authenticate local Modal CLI
+auth:
+    uv run modal setup
+
+# Show current Modal CLI profile
+profile:
+    uv run modal profile current
+
+# List deployed Modal apps
+apps:
+    uv run modal app list
+
+# Create or update the Modal secret holding FLINT_API_KEY (falls back to .env FLINT_API_KEY)
+secret api_key="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    key="{{api_key}}"
+    if [[ -z "$key" ]]; then
+        key="${FLINT_API_KEY:-}"
+    fi
+    if [[ -z "$key" ]]; then
+        echo "Error: pass api_key=... or set FLINT_API_KEY in modal/.env" >&2
+        exit 1
+    fi
+    uv run modal secret create flint-api-key "FLINT_API_KEY=$key" --force
+
+# Pre-download RecursiveSI/flint weights to the persistent Modal volume
+download variant="bf16":
+    FLINT_VARIANT={{variant}} uv run modal run flint_server.py::download_weights --variant {{variant}}
+
+# Deploy the Modal serverless flint endpoint (variant: bf16 | nvfp4)
+deploy variant="bf16" gpu="" snapshot="0":
+    FLINT_VARIANT={{variant}} FLINT_GPU={{gpu}} FLINT_ENABLE_GPU_SNAPSHOT={{snapshot}} uv run modal deploy flint_server.py
+
+# Run standalone smoke test against a deployed Modal endpoint (falls back to .env FLINT_VLLM_URL / FLINT_API_KEY)
+smoke-test url="" api_key="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -n "{{url}}" ]]; then export FLINT_VLLM_URL="{{url}}"; fi
+    if [[ -n "{{api_key}}" ]]; then export FLINT_API_KEY="{{api_key}}"; fi
+    uv run python smoke_test.py
+
+# Tail logs for the deployed Modal flint app
+logs variant="bf16":
+    uv run modal app logs flint-{{variant}}
+
+# Stop the deployed Modal flint app
+stop variant="bf16":
+    uv run modal app stop flint-{{variant}}

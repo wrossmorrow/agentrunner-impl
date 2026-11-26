@@ -1,0 +1,61 @@
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: agent-router-routes
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agent-router
+  llmRequestCosts:
+    - metadataKey: llm_input_token
+      type: InputToken
+    - metadataKey: llm_output_token
+      type: OutputToken
+    - metadataKey: llm_total_token
+      type: TotalToken
+  rules:
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: RecursiveSI/flint
+      timeouts:
+        request: 180s
+        backendRequest: 180s
+      backendRefs:
+        - name: flint-modal
+---
+# Allow >=180s for Modal scale-from-zero cold starts (~85s cached).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: agent-router-timeouts
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agent-router
+  timeout:
+    http:
+      requestTimeout: 180s
+  connection:
+    bufferLimit: 32Mi
+  requestBuffer:
+    limit: 32Mi
+    mode: LimitOnly
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: agent-router-client-buffers
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agent-router
+  connection:
+    bufferLimit: 32Mi

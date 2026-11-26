@@ -1,0 +1,55 @@
+# External Modal endpoint for RecursiveSI/flint.
+# If switching variants (e.g. flint-nvfp4), update the hostname in both Backend and BackendTLSPolicy.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: flint-modal
+  namespace: ai-gateway
+spec:
+  endpoints:
+    - fqdn:
+        hostname: morrowwr--flint-bf16-flintserver-serve.us-east.modal.run
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: flint-modal-tls
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: flint-modal
+  validation:
+    wellKnownCACertificates: System
+    hostname: morrowwr--flint-bf16-flintserver-serve.us-east.modal.run
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: flint-modal
+  namespace: ai-gateway
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: flint-modal
+---
+# Secret "flint-modal-api-key" (key: "apiKey") is templated by Infisical or `just platform flint-secret`.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: flint-modal-auth
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: flint-modal
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: flint-modal-api-key

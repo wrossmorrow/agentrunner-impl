@@ -1,0 +1,12 @@
+# Helm values for infisical-helm-charts/secrets-operator (https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/)
+# Sized for GKE Autopilot CPU:memory ratio constraints.
+
+controllerManager:
+  manager:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi

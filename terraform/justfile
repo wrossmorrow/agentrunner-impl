@@ -1,0 +1,49 @@
+default:
+    @just --list
+
+# Format Terraform files recursively
+fmt:
+    terraform fmt -recursive
+
+# Check Terraform formatting
+fmt-check:
+    terraform fmt -check -recursive
+
+# Initialize Terraform (pass -backend-config=backend.hcl for GCS state)
+init *args:
+    terraform init {{args}}
+
+# Validate Terraform configuration (initializes locally without backend if needed)
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ ! -d .terraform ]]; then
+        terraform init -backend=false -input=false >/dev/null
+    fi
+    terraform validate
+
+# Run formatting and validation checks
+check: fmt-check validate
+
+# Preview Terraform changes
+plan *args:
+    terraform plan {{args}}
+
+# Apply Terraform changes
+apply *args:
+    terraform apply {{args}}
+
+# Destroy Terraform-managed infrastructure
+destroy *args:
+    terraform destroy {{args}}
+
+# Print Terraform outputs
+outputs:
+    terraform output
+
+# Fetch cluster credentials into local kubeconfig
+kubeconfig:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cmd="$(terraform output -raw get_credentials_command)"
+    bash -c "$cmd"

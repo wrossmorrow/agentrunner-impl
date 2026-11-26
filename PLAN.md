@@ -3,6 +3,11 @@
 ## Goal
 Stand up a personal, scale-to-zero cloud deployment of [`agentrunner`](https://github.com/wrossmorrow/github-agent-runner) on **GKE Autopilot** (CPU-only) backed by **Recursive's `flint`** running serverless on **Modal** (scale-to-zero GPU), fronted by an in-cluster **Agent Router / AI Gateway**.
 
+## Decisions
+- **AI Gateway / Agent Router**: **Envoy AI Gateway** (Kubernetes Gateway API native, direct path to `InferencePool` later).
+- **`flint` Serving (Modal)**: Configurable via env vars in `modal/flint_server.py` for **BF16** (`RecursiveSI/flint`, default `B200`) and **NVFP4** (`RecursiveSI/flint-nvfp4-gguf`, default `B200`) — `vllm/vllm-openai:flint` requires Blackwell (`FlashInfer TRTLLM`) — with optional GPU memory snapshot support.
+- **Secrets Management**: **Infisical** (Infisical Kubernetes Secrets Operator for GKE Autopilot + Infisical CLI/sync for Modal).
+
 ```text
 GitHub Actions PR ──(outbound poll)──> GKE Autopilot (CPU-only, scale-to-zero runners)
                                          ├── arc-systems: ARC v2 controller + listener
@@ -51,6 +56,12 @@ GitHub Actions PR ──(outbound poll)──> GKE Autopilot (CPU-only, scale-to
    - Optional Modal GPU memory snapshots to cut cold-start latency.
 3. **Verify standalone**: `curl` `/v1/models` and a tool-calling `/v1/chat/completions` request from cold start and measure cold vs. warm latency.
 
+### Quantized & Cold-Start Notes
+- **`RecursiveSI/flint-nvfp4-gguf` on Modal (`B200`)**: ~4× smaller weights (~20 GB vs. 74 GiB BF16) for faster 9P cold-start loading and native Blackwell FP4; deploy via `just modal download nvfp4 && just modal deploy nvfp4` (passes `--hf-config-path RecursiveSI/flint --tokenizer RecursiveSI/flint`).
+- **GGUF quants via `llama-server` (`llama.cpp` CUDA) on cheaper GPUs (`L40S` 48 GB)**: Avoids `vllm/vllm-openai:flint`'s Blackwell-only `FlashInfer TRTLLM` requirement and FlashInfer JIT compile (~3× lower \$/GPU-sec than `B200`, fast cold starts), while keeping an OpenAI-compatible `/v1/chat/completions` + `--jinja` tool-calling API.
+- **Cold-start findings (BF16 on `B200`)**: `vllm/vllm-openai:flint` requires Blackwell (`B200` / `sm100`) for `FlashInfer TRTLLM` MoE; mounting `flint-flashinfer-cache` at `/cache/flashinfer` (via `FLASHINFER_WORKSPACE_BASE` / `FLASHINFER_CACHE_DIR`) + `--safetensors-load-strategy=prefetch` caches the ~2m15s JIT compile, and GPU memory snapshots (`FLINT_ENABLE_GPU_SNAPSHOT=1`) can keep cold starts safely below Modal's ~150s `303` redirect threshold.
+- **Alternative model note**: `thinkingmachines/Inkling-2-Mini` (26B MoE, 1M context, NVFP4/MXFP8 + DSpark speculative decoding) is a strong future candidate once the cluster is live—behind Envoy AI Gateway it's just adding/swapping an upstream backend.
+
 ---
 
 ## Phase 2: GKE Autopilot via Terraform (`terraform/`)
@@ -80,7 +91,7 @@ Install via Helm (or Terraform `helm_release` / `just` recipes):
 ---
 
 ## Phase 4: Secrets, CRs & Live Verification (`runners/`)
-1. **Secrets** (never committed to git; managed via GCP Secret Manager + bootstrap script or External Secrets Operator):
+1. **Secrets** (never committed to git; managed via **Infisical** — `InfisicalSecret` CRs via the Infisical Kubernetes Secrets Operator for GKE Autopilot, plus Infisical CLI/sync for Modal):
    - `actions-runners/arc-github-auth` (ARC GitHub App: `Administration: Read & write` for repo, or `Self-hosted runners: Read & write` for org)
    - `actions-runners/review-bot-app-key` (dedicated review-bot App: `Contents: Read-only`, `Pull requests: Read & write`)
    - `actions-runners/agent-gateway-token` (token accepted by the in-cluster Agent Router)

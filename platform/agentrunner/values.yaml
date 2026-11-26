@@ -1,0 +1,38 @@
+# Helm values for oci://ghcr.io/wrossmorrow/charts/agentrunner-controller
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/wrossmorrow/agentrunner-controller
+  tag: ""
+  pullPolicy: IfNotPresent
+
+controller:
+  # Empty means auto-detect from the ARC controller Deployment in arcControllerNamespace.
+  arcVersion: ""
+  arcControllerNamespace: arc-systems
+  arcControllerServiceAccount: arc-gha-rs-controller
+  githubAuthImage: ghcr.io/wrossmorrow/agentrunner-github-auth:0.0.2
+  imagePullPolicy: IfNotPresent
+  leaderElect: false
+  metricsBindAddress: ":8080"
+  healthProbeBindAddress: ":8081"
+
+podSecurityContext:
+  runAsNonRoot: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Sized for GKE Autopilot CPU:memory ratio constraints
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

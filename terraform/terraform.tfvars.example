@@ -1,0 +1,15 @@
+project_id   = "your-gcp-project-id"
+region       = "us-central1"
+cluster_name = "agentreview"
+
+# Optional: restrict GKE control plane access to specific CIDRs
+# authorized_networks = [
+#   {
+#     cidr_block   = "203.0.113.10/32"
+#     display_name = "home-ip"
+#   }
+# ]
+
+# Optional: enable GCP monthly budget alerts
+# billing_account_id = "012345-6789AB-CDEF01"
+# monthly_budget_usd = 50
