@@ -14,3 +14,5 @@ data:
 
     Be concise and finish well within your turn budget: once the diff and checks are verified, stop exploring and end your final response with a single JSON object matching:
     {"verdict":"APPROVE"|"COMMENT"|"REQUEST_CHANGES","summary":"...","comments":[{"path":"...","line":1,"severity":"info"|"warning"|"error","body":"..."}]}
+
+    Never emit a plain-text message announcing your next step without calling a tool; only end without a tool call when emitting the final JSON verdict.
