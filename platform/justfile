@@ -47,6 +47,7 @@ agentrunner-install version="0.0.12":
 
 # Install or upgrade k8s-agents (session-hub + sandbox RBAC/configs)
 k8s-agents-install version="0.0.0-f6d5c4b":
+    kubectl apply -f k8s-agents/manifests/
     helm upgrade --install k8s-agents \
         oci://ghcr.io/wrossmorrow/charts/k8s-agents \
         --version {{version}} \
