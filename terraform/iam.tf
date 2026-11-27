@@ -46,6 +46,36 @@ resource "google_service_account_iam_member" "agent_router_workload_identity" {
   depends_on = [google_container_cluster.autopilot]
 }
 
+resource "google_storage_bucket" "sessions" {
+  name                        = "${var.project_id}-${var.cluster_name}-sessions"
+  location                    = var.region
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_service_account" "session_hub" {
+  account_id   = "${var.cluster_name}-session-hub"
+  display_name = "${var.cluster_name} Session Hub GCS Archive Service Account"
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_storage_bucket_iam_member" "session_hub_object_user" {
+  bucket = google_storage_bucket.sessions.name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.session_hub.email}"
+}
+
+resource "google_service_account_iam_member" "session_hub_workload_identity" {
+  service_account_id = google_service_account.session_hub.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[session-system/session-hub]"
+
+  depends_on = [google_container_cluster.autopilot]
+}
+
 resource "google_billing_budget" "monthly" {
   count = var.billing_account_id != "" ? 1 : 0
 

@@ -12,6 +12,7 @@ locals {
     "compute.googleapis.com",
     "iam.googleapis.com",
     "aiplatform.googleapis.com",
+    "storage.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
   ]

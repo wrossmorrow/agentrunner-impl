@@ -30,3 +30,8 @@ spec:
       configMapName: org-review-policy
     githubAppSecretRef:
       name: review-bot-app-key
+    sessionSink:
+      endpoint: http://session-hub.session-system.svc.cluster.local:8787/internal/archive
+      authSecretRef:
+        name: session-sink-token
+        key: token

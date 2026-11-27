@@ -8,7 +8,7 @@ check:
     #!/usr/bin/env bash
     set -euo pipefail
     ruby -ryaml -e '
-      files = Dir.glob("{arc,agentrunner,agent-router,infisical}/**/*.yaml").sort
+      files = Dir.glob("{arc,agentrunner,agent-router,infisical,k8s-agents}/**/*.yaml").sort
       abort("No YAML files found") if files.empty?
       files.each do |f|
         YAML.load_stream(File.read(f))
@@ -33,7 +33,7 @@ arc-install version="0.11.0":
     helm "${args[@]}"
 
 # Install or upgrade agentrunner-controller (including CRDs)
-agentrunner-install version="0.0.9":
+agentrunner-install version="0.0.12":
     helm show crds \
         oci://ghcr.io/wrossmorrow/charts/agentrunner-controller \
         --version {{version}} \
@@ -44,6 +44,16 @@ agentrunner-install version="0.0.9":
         --namespace agentrunner-system \
         --create-namespace \
         -f agentrunner/values.yaml
+
+# Install or upgrade k8s-agents (session-hub + sandbox RBAC/configs)
+k8s-agents-install version="0.0.0-f6d5c4b":
+    helm upgrade --install k8s-agents \
+        oci://ghcr.io/wrossmorrow/charts/k8s-agents \
+        --version {{version}} \
+        --namespace session-system \
+        --create-namespace \
+        -f k8s-agents/values.yaml
+    kubectl rollout status deployment/session-hub -n session-system --timeout=3m
 
 # Install or upgrade Envoy Gateway and Envoy AI Gateway
 gateway-install eg_version="v1.10.0" aieg_version="v1.3.0":
@@ -150,3 +160,4 @@ status:
     kubectl get pods -n infisical-operator-system
     kubectl get infisicalconnection,infisicalauth -n infisical-operator-system
     kubectl get pods,svc,gateway,aigatewayroute,infisicalstaticsecret -n ai-gateway
+    kubectl get pods,svc -n session-system

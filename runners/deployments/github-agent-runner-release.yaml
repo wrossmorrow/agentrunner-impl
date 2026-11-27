@@ -31,3 +31,8 @@ spec:
       configMapName: release-notes-policy
     githubAppSecretRef:
       name: release-bot-app
+    sessionSink:
+      endpoint: http://session-hub.session-system.svc.cluster.local:8787/internal/archive
+      authSecretRef:
+        name: session-sink-token
+        key: token

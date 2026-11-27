@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usage-sink
+  namespace: ai-gateway
+  labels:
+    app: usage-sink
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: usage-sink
+  template:
+    metadata:
+      labels:
+        app: usage-sink
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: usage-sink
+          image: ghcr.io/wrossmorrow/agentrunner-usage-sink:latest
+          imagePullPolicy: Always
+          ports:
+            - name: grpc-als
+              containerPort: 50051
+            - name: metrics
+              containerPort: 9090
+          env:
+            - name: USAGE_SINK_MODE
+              value: "both"
+            - name: MOTHERDUCK_DATABASE
+              value: "k8s_agent_usage"
+            - name: USAGE_SINK_FLUSH_INTERVAL
+              value: "60s"
+            - name: MOTHERDUCK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: usage-sink-motherduck
+                  key: MOTHERDUCK_TOKEN
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: usage-sink
+  namespace: ai-gateway
+  labels:
+    app: usage-sink
+spec:
+  selector:
+    app: usage-sink
+  ports:
+    - name: grpc-als
+      port: 50051
+      targetPort: grpc-als
+      appProtocol: kubernetes.io/h2c
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: usage-sink-ingress
+  namespace: ai-gateway
+spec:
+  podSelector:
+    matchLabels:
+      app: usage-sink
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              gateway.envoyproxy.io/owning-gateway-namespace: ai-gateway
+      ports:
+        - protocol: TCP
+          port: 50051

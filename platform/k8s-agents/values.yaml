@@ -1,0 +1,57 @@
+# Helm values for oci://ghcr.io/wrossmorrow/charts/k8s-agents
+
+fullnameOverride: session-hub
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/wrossmorrow/k8s-agents-session-hub
+  tag: ""
+  pullPolicy: Always
+
+sandboxNamespace: interactive-sessions
+createSandboxNamespace: false
+
+serviceAccount:
+  create: true
+  name: session-hub
+  annotations:
+    iam.gke.io/gcp-service-account: "agentreview-session-hub@agentrunner-515823.iam.gserviceaccount.com"
+
+rbac:
+  create: true
+
+service:
+  type: ClusterIP
+  port: 8787
+
+gcs:
+  bucket: "agentrunner-515823-agentreview-sessions"
+
+sessionSink:
+  secretName: session-sink-token
+  secretKey: token
+  optional: true
+
+sandbox:
+  imageRepository: ghcr.io/wrossmorrow
+  imageTag: latest
+  gatewayEndpoint: http://agent-router.ai-gateway.svc.cluster.local:8080/v1
+  gatewaySecretName: agent-gateway-token
+  idlePauseSeconds: 1200
+  modelCatalogConfigMap: session-model-catalog
+  githubApp:
+    enabled: true
+    secretName: interactive-github-app
+    configMapName: interactive-github-app-config
+    createConfigMap: true
+    appId: "5432851"
+    installationId: "174275683"
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

@@ -59,6 +59,24 @@ spec:
               session_kind: "%REQ(X-SESSION-KIND)%"
               session_name: "%REQ(X-SESSION-NAME)%"
               ai_gateway_metadata: "%METADATA(DYNAMIC:io.envoy.ai_gateway)%"
+        - sinks:
+            - type: ALS
+              als:
+                logName: agent-router-usage
+                backendRefs:
+                  - name: usage-sink
+                    port: 50051
+                type: HTTP
+                http:
+                  requestHeaders:
+                    - x-session-id
+                    - x-session-kind
+                    - x-session-name
+                    - x-github-repo
+                    - x-github-pr
+                    - x-github-run-id
+                    - x-client-id
+                    - x-ai-eg-model
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

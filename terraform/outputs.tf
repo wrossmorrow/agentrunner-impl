@@ -33,3 +33,13 @@ output "get_credentials_command" {
   description = "Command to configure kubectl for the GKE Autopilot cluster."
   value       = "gcloud container clusters get-credentials ${google_container_cluster.autopilot.name} --region ${var.region} --project ${var.project_id}"
 }
+
+output "sessions_bucket" {
+  description = "GCS bucket for archived interactive and ARC runner sessions."
+  value       = google_storage_bucket.sessions.name
+}
+
+output "session_hub_service_account" {
+  description = "GCP service account email bound to session-system/session-hub via Workload Identity."
+  value       = google_service_account.session_hub.email
+}
