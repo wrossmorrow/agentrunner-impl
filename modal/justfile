@@ -21,15 +21,17 @@ lint:
 
 # Typecheck Python sources with mypy
 typecheck:
-    uv run mypy flint_server.py inkling_server.py smoke_test.py
+    uv run mypy flint_server.py inkling_server.py qwen_server.py smoke_test.py
 
-# Compile and verify server imports under flint and inkling configs
+# Compile and verify server imports under flint, inkling, and qwen configs
 verify-imports:
-    uv run python -m py_compile flint_server.py inkling_server.py smoke_test.py
+    uv run python -m py_compile flint_server.py inkling_server.py qwen_server.py smoke_test.py
     PYTHONPATH=. FLINT_VARIANT=bf16 uv run python -c "import flint_server; print(flint_server.APP_NAME, flint_server.GPU)"
     PYTHONPATH=. FLINT_VARIANT=nvfp4 FLINT_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import flint_server; print(flint_server.APP_NAME, flint_server.GPU, flint_server.ENABLE_GPU_SNAPSHOT)"
     PYTHONPATH=. uv run python -c "import inkling_server; print(inkling_server.APP_NAME, inkling_server.GPU, inkling_server.ENABLE_DSPARK)"
     PYTHONPATH=. INKLING_GPU=B200 INKLING_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import inkling_server; print(inkling_server.APP_NAME, inkling_server.GPU, inkling_server.ENABLE_GPU_SNAPSHOT)"
+    PYTHONPATH=. QWEN_VARIANT=fp8 uv run python -c "import qwen_server; print(qwen_server.APP_NAME, qwen_server.GPU, qwen_server.ENABLE_MTP)"
+    PYTHONPATH=. QWEN_VARIANT=bf16 QWEN_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import qwen_server; print(qwen_server.APP_NAME, qwen_server.GPU, qwen_server.ENABLE_GPU_SNAPSHOT)"
 
 # Run all code quality and import checks
 check: fmt-check lint typecheck verify-imports
@@ -131,3 +133,51 @@ inkling-logs:
 # Stop the deployed Modal Inkling-2-Mini app
 inkling-stop:
     uv run modal app stop inkling-2-mini
+
+# Create or update the Modal secret holding QWEN_API_KEY (falls back to .env QWEN_API_KEY)
+qwen-secret api_key="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    key="{{api_key}}"
+    if [[ -z "$key" ]]; then
+        key="${QWEN_API_KEY:-}"
+    fi
+    if [[ -z "$key" ]]; then
+        echo "Error: pass api_key=... or set QWEN_API_KEY in modal/.env" >&2
+        exit 1
+    fi
+    uv run modal secret create qwen-api-key "QWEN_API_KEY=$key" --force
+
+# Pre-download Qwen/Qwen3.8-27B weights to the persistent Modal volume (variant: fp8 | bf16)
+qwen-download variant="fp8":
+    QWEN_VARIANT={{variant}} uv run modal run qwen_server.py::download_weights --variant {{variant}}
+
+# Deploy the Modal serverless Qwen3.8-27B endpoint (variant: fp8 | bf16)
+qwen-deploy variant="fp8" gpu="" snapshot="0" mtp="1":
+    QWEN_VARIANT={{variant}} QWEN_GPU={{gpu}} QWEN_ENABLE_GPU_SNAPSHOT={{snapshot}} QWEN_ENABLE_MTP={{mtp}} uv run modal deploy qwen_server.py
+
+# Run standalone smoke test against the deployed Qwen3.8-27B endpoint
+qwen-smoke-test url="" api_key="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target_url="{{url}}"
+    target_key="{{api_key}}"
+    if [[ -z "$target_url" ]]; then
+        target_url="${QWEN_URL:-${QWEN_VLLM_URL:-}}"
+    fi
+    if [[ -z "$target_key" ]]; then
+        target_key="${QWEN_API_KEY:-}"
+    fi
+    if [[ -z "$target_url" || -z "$target_key" ]]; then
+        echo "Error: pass url/api_key or set QWEN_URL (or QWEN_VLLM_URL) and QWEN_API_KEY in modal/.env" >&2
+        exit 1
+    fi
+    uv run python smoke_test.py --model Qwen/Qwen3.8-27B --url "$target_url" --api-key "$target_key"
+
+# Tail logs for the deployed Modal Qwen3.8-27B app
+qwen-logs variant="fp8":
+    uv run modal app logs qwen38-27b-{{variant}}
+
+# Stop the deployed Modal Qwen3.8-27B app
+qwen-stop variant="fp8":
+    uv run modal app stop qwen38-27b-{{variant}}

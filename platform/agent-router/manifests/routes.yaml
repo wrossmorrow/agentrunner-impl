@@ -46,6 +46,16 @@ spec:
         backendRequest: 180s
       backendRefs:
         - name: vertex-gemini
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: Qwen/Qwen3.8-27B
+      timeouts:
+        request: 180s
+        backendRequest: 180s
+      backendRefs:
+        - name: qwen-modal
 ---
 # Allow >=180s for Modal scale-from-zero cold starts (~85s cached).
 apiVersion: gateway.envoyproxy.io/v1alpha1

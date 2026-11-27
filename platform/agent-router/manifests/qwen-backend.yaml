@@ -1,0 +1,55 @@
+# External Modal endpoint for Qwen/Qwen3.8-27B (fp8 default on H100).
+# If switching variants (e.g. qwen38-27b-bf16), update the hostname in both Backend and BackendTLSPolicy.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: qwen-modal
+  namespace: ai-gateway
+spec:
+  endpoints:
+    - fqdn:
+        hostname: morrowwr--qwen38-27b-fp8-qwenserver-serve.us-east.modal.run
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: qwen-modal-tls
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: qwen-modal
+  validation:
+    wellKnownCACertificates: System
+    hostname: morrowwr--qwen38-27b-fp8-qwenserver-serve.us-east.modal.run
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: qwen-modal
+  namespace: ai-gateway
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: qwen-modal
+---
+# Secret "qwen-modal-api-key" (key: "apiKey") is templated by Infisical from /ai-gateway QWEN_API_KEY.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: qwen-modal-auth
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: qwen-modal
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: qwen-modal-api-key
