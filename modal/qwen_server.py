@@ -52,6 +52,11 @@ ENABLE_GPU_SNAPSHOT = os.environ.get("QWEN_ENABLE_GPU_SNAPSHOT", "0").strip().lo
     "true",
     "yes",
 )
+REQUIRE_PROXY_AUTH = os.environ.get("QWEN_REQUIRE_PROXY_AUTH", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
 SECRET_NAME = os.environ.get("QWEN_SECRET_NAME", "qwen-api-key").strip() or "qwen-api-key"
 
 hf_cache_vol = modal.Volume.from_name("qwen-hf-cache", create_if_missing=True)
@@ -71,6 +76,7 @@ vllm_env = {
     "QWEN_GPU_MEMORY_UTILIZATION": str(GPU_MEMORY_UTILIZATION),
     "QWEN_ENABLE_MTP": "1" if ENABLE_MTP else "0",
     "QWEN_ENABLE_GPU_SNAPSHOT": "1" if ENABLE_GPU_SNAPSHOT else "0",
+    "QWEN_REQUIRE_PROXY_AUTH": "1" if REQUIRE_PROXY_AUTH else "0",
     "QWEN_SECRET_NAME": SECRET_NAME,
 }
 if ENABLE_GPU_SNAPSHOT:
@@ -135,8 +141,9 @@ _cls_kwargs: dict[str, Any] = {
         "/root/.cache/vllm": vllm_cache_vol,
         "/cache/flashinfer": flashinfer_cache_vol,
     },
-    "secrets": [modal.Secret.from_name(SECRET_NAME)],
 }
+if not REQUIRE_PROXY_AUTH:
+    _cls_kwargs["secrets"] = [modal.Secret.from_name(SECRET_NAME)]
 if ENABLE_GPU_SNAPSHOT:
     _cls_kwargs["enable_memory_snapshot"] = True
     _cls_kwargs["experimental_options"] = {"enable_gpu_snapshot": True}
@@ -149,13 +156,15 @@ class QwenServer:
 
     server_process: subprocess.Popen[bytes] | None = None
 
-    def _get_api_key(self) -> str:
+    def _get_api_key(self) -> str | None:
+        if REQUIRE_PROXY_AUTH:
+            return None
         api_key = os.environ.get("QWEN_API_KEY", "").strip()
         if not api_key:
             raise RuntimeError(f"QWEN_API_KEY is missing from Modal Secret {SECRET_NAME!r}")
         return api_key
 
-    def _build_vllm_cmd(self, api_key: str) -> list[str]:
+    def _build_vllm_cmd(self, api_key: str | None) -> list[str]:
         cmd = [
             "vllm",
             "serve",
@@ -166,8 +175,6 @@ class QwenServer:
             "0.0.0.0",
             "--port",
             str(VLLM_PORT),
-            "--api-key",
-            api_key,
             "--tensor-parallel-size",
             "1",
             "--max-model-len",
@@ -186,6 +193,8 @@ class QwenServer:
             "qwen3",
             *PRESET["extra_vllm_args"],
         ]
+        if api_key:
+            cmd.extend(["--api-key", api_key])
         if ENABLE_MTP:
             cmd.extend(["--speculative-config", MTP_SPEC_CONFIG])
         if ENABLE_GPU_SNAPSHOT:
@@ -229,7 +238,7 @@ class QwenServer:
             time.sleep(2)
         raise RuntimeError(f"vLLM server failed to become healthy within {timeout_seconds}s")
 
-    def _start_vllm(self) -> str:
+    def _start_vllm(self) -> str | None:
         api_key = self._get_api_key()
         cmd = self._build_vllm_cmd(api_key)
         self.server_process = subprocess.Popen(cmd)
@@ -238,7 +247,7 @@ class QwenServer:
         vllm_cache_vol.commit()
         return api_key
 
-    def _warmup_and_sleep(self, api_key: str) -> None:
+    def _warmup_and_sleep(self, api_key: str | None) -> None:
         base_url = f"http://127.0.0.1:{VLLM_PORT}"
         payload = {
             "model": SERVED_MODEL_NAME,
@@ -246,7 +255,7 @@ class QwenServer:
             "max_tokens": 8,
             "temperature": 0.0,
         }
-        headers = {"Authorization": f"Bearer {api_key}"}
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         for _ in range(2):
             self._http_request(
                 f"{base_url}/v1/chat/completions",
@@ -292,6 +301,8 @@ class QwenServer:
                 self.server_process.kill()
                 self.server_process.wait(timeout=5)
 
-    @modal.web_server(port=VLLM_PORT, startup_timeout=10 * MINUTES)
+    @modal.web_server(
+        port=VLLM_PORT, startup_timeout=10 * MINUTES, requires_proxy_auth=REQUIRE_PROXY_AUTH
+    )
     def serve(self) -> None:
         pass

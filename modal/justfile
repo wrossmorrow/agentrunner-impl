@@ -30,8 +30,8 @@ verify-imports:
     PYTHONPATH=. FLINT_VARIANT=nvfp4 FLINT_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import flint_server; print(flint_server.APP_NAME, flint_server.GPU, flint_server.ENABLE_GPU_SNAPSHOT)"
     PYTHONPATH=. uv run python -c "import inkling_server; print(inkling_server.APP_NAME, inkling_server.GPU, inkling_server.ENABLE_DSPARK)"
     PYTHONPATH=. INKLING_GPU=B200 INKLING_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import inkling_server; print(inkling_server.APP_NAME, inkling_server.GPU, inkling_server.ENABLE_GPU_SNAPSHOT)"
-    PYTHONPATH=. QWEN_VARIANT=fp8 uv run python -c "import qwen_server; print(qwen_server.APP_NAME, qwen_server.GPU, qwen_server.ENABLE_MTP)"
-    PYTHONPATH=. QWEN_VARIANT=bf16 QWEN_ENABLE_GPU_SNAPSHOT=1 uv run python -c "import qwen_server; print(qwen_server.APP_NAME, qwen_server.GPU, qwen_server.ENABLE_GPU_SNAPSHOT)"
+    PYTHONPATH=. QWEN_VARIANT=fp8 uv run python -c "import qwen_server; print(qwen_server.APP_NAME, qwen_server.GPU, qwen_server.ENABLE_MTP, qwen_server.REQUIRE_PROXY_AUTH)"
+    PYTHONPATH=. QWEN_VARIANT=bf16 QWEN_ENABLE_GPU_SNAPSHOT=1 QWEN_REQUIRE_PROXY_AUTH=0 uv run python -c "import qwen_server; print(qwen_server.APP_NAME, qwen_server.GPU, qwen_server.ENABLE_GPU_SNAPSHOT, qwen_server.REQUIRE_PROXY_AUTH)"
 
 # Run all code quality and import checks
 check: fmt-check lint typecheck verify-imports
@@ -70,12 +70,16 @@ download variant="bf16":
 deploy variant="bf16" gpu="" snapshot="0":
     FLINT_VARIANT={{variant}} FLINT_GPU={{gpu}} FLINT_ENABLE_GPU_SNAPSHOT={{snapshot}} uv run modal deploy flint_server.py
 
-# Run standalone smoke test against a deployed Modal endpoint (falls back to .env FLINT_VLLM_URL / FLINT_API_KEY)
+# Run standalone smoke test against a deployed Modal endpoint (falls back to .env FLINT_VLLM_URL / MODAL_PROXY_TOKEN / FLINT_API_KEY)
 smoke-test url="" api_key="":
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ -n "{{url}}" ]]; then export FLINT_VLLM_URL="{{url}}"; fi
-    if [[ -n "{{api_key}}" ]]; then export FLINT_API_KEY="{{api_key}}"; fi
+    if [[ -n "{{api_key}}" ]]; then
+        export FLINT_API_KEY="{{api_key}}"
+    elif [[ -n "${MODAL_PROXY_TOKEN:-}" ]]; then
+        export FLINT_API_KEY="${MODAL_PROXY_TOKEN}"
+    fi
     uv run python smoke_test.py
 
 # Tail logs for the deployed Modal flint app
@@ -118,10 +122,10 @@ inkling-smoke-test url="" api_key="":
         target_url="${INKLING_URL:-${INKLING_VLLM_URL:-}}"
     fi
     if [[ -z "$target_key" ]]; then
-        target_key="${INKLING_API_KEY:-}"
+        target_key="${MODAL_PROXY_TOKEN:-${INKLING_API_KEY:-}}"
     fi
     if [[ -z "$target_url" || -z "$target_key" ]]; then
-        echo "Error: pass url/api_key or set INKLING_URL (or INKLING_VLLM_URL) and INKLING_API_KEY in modal/.env" >&2
+        echo "Error: pass url/api_key or set INKLING_URL (or INKLING_VLLM_URL) and MODAL_PROXY_TOKEN / INKLING_API_KEY in modal/.env" >&2
         exit 1
     fi
     uv run python smoke_test.py --model thinkingmachines/Inkling-2-Mini --url "$target_url" --api-key "$target_key"
@@ -166,10 +170,10 @@ qwen-smoke-test url="" api_key="":
         target_url="${QWEN_URL:-${QWEN_VLLM_URL:-}}"
     fi
     if [[ -z "$target_key" ]]; then
-        target_key="${QWEN_API_KEY:-}"
+        target_key="${MODAL_PROXY_TOKEN:-${QWEN_API_KEY:-}}"
     fi
     if [[ -z "$target_url" || -z "$target_key" ]]; then
-        echo "Error: pass url/api_key or set QWEN_URL (or QWEN_VLLM_URL) and QWEN_API_KEY in modal/.env" >&2
+        echo "Error: pass url/api_key or set QWEN_URL (or QWEN_VLLM_URL) and MODAL_PROXY_TOKEN / QWEN_API_KEY in modal/.env" >&2
         exit 1
     fi
     uv run python smoke_test.py --model Qwen/Qwen3.8-27B --url "$target_url" --api-key "$target_key"
