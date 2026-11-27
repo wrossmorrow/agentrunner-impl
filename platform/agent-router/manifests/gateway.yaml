@@ -46,6 +46,8 @@ spec:
               duration_ms: "%DURATION%"
               bytes_received: "%BYTES_RECEIVED%"
               bytes_sent: "%BYTES_SENT%"
+              ttft_ms: "%RESPONSE_DURATION%"
+              tx_duration_ms: "%RESPONSE_TX_DURATION%"
               upstream_host: "%UPSTREAM_HOST%"
               upstream_protocol: "%UPSTREAM_PROTOCOL%"
               upstream_transport_failure: "%UPSTREAM_TRANSPORT_FAILURE_REASON%"
@@ -53,6 +55,9 @@ spec:
               github_run_id: "%REQ(X-GITHUB-RUN-ID)%"
               github_pr: "%REQ(X-GITHUB-PR)%"
               client_id: "%REQ(X-CLIENT-ID)%"
+              session_id: "%REQ(X-SESSION-ID)%"
+              session_kind: "%REQ(X-SESSION-KIND)%"
+              session_name: "%REQ(X-SESSION-NAME)%"
               ai_gateway_metadata: "%METADATA(DYNAMIC:io.envoy.ai_gateway)%"
 ---
 apiVersion: gateway.networking.k8s.io/v1
