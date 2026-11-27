@@ -23,15 +23,27 @@ resource "google_project_iam_member" "gke_nodes" {
   member  = "serviceAccount:${google_service_account.gke_nodes.email}"
 }
 
+resource "google_service_account" "agent_router" {
+  account_id   = "${var.cluster_name}-agent-router"
+  display_name = "${var.cluster_name} Agent Router Vertex AI Service Account"
+
+  depends_on = [google_project_service.apis]
+}
+
 resource "google_project_iam_member" "agent_router_vertex_ai" {
   project = var.project_id
   role    = "roles/aiplatform.user"
-  member  = "principal://iam.googleapis.com/projects/${data.google_project.current.number}/locations/global/workloadIdentityPools/${var.project_id}.svc.id.goog/subject/ns/ai-gateway/sa/envoy-ai-gateway-agent-router-f09a7a01"
+  member  = "serviceAccount:${google_service_account.agent_router.email}"
 
-  depends_on = [
-    google_project_service.apis,
-    google_container_cluster.autopilot,
-  ]
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_service_account_iam_member" "agent_router_workload_identity" {
+  service_account_id = google_service_account.agent_router.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[ai-gateway/agent-router-proxy]"
+
+  depends_on = [google_container_cluster.autopilot]
 }
 
 resource "google_billing_budget" "monthly" {
