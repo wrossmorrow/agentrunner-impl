@@ -1,8 +1,10 @@
-# agentrunner implementation
+# github-agent-runner implementation
 
-Scale-to-zero cloud deployment of [`agentrunner`](https://github.com/wrossmorrow/github-agent-runner) on **GKE Autopilot** (CPU-only) backed by serverless **Modal** GPUs (`RecursiveSI/flint`, `thinkingmachines/Inkling-2-Mini`, `Qwen/Qwen3.8-27B`) and **GCP Vertex AI** (`^gemini-.*`), fronted by **Envoy Gateway + Agent Router (Envoy AI Gateway)** and synced via **Infisical**.
+Scale-to-zero cloud deployment of [`github-agent-runner`](https://github.com/wrossmorrow/github-agent-runner) on **GKE Autopilot** (CPU-only) backed by serverless **Modal** GPUs (`RecursiveSI/flint`, `thinkingmachines/Inkling-2-Mini`, `Qwen/Qwen3.8-27B`) and **GCP Vertex AI** (`^gemini-.*`), fronted by **Envoy Gateway + Agent Router (Envoy AI Gateway)** and synced via **Infisical**.
 
-> See [docs/inference-and-scaling.md](docs/inference-and-scaling.md) for measured cold-start / GPU snapshot benchmarks, failover trade-offs, and a personal vs. 100-person engineering team cost & architecture comparison.
+Basically dogfooding for [`github-agent-runner`](https://github.com/wrossmorrow/github-agent-runner). Run (as of writing) automated agentic review and release notes drafting in an architecture one might expect to formally run in practice.
+
+See [docs/inference-and-scaling.md](docs/inference-and-scaling.md) for measured cold-start / GPU snapshot benchmarks, failover trade-offs, and a personal vs. N-person engineering team cost & architecture comparison.
 
 ```text
 GitHub Actions PR/Release ──(outbound poll)──> GKE Autopilot (CPU-only, scale-to-zero runners)

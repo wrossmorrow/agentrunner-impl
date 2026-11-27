@@ -1,7 +1,7 @@
 apiVersion: agentic.example.io/v1alpha1
 kind: AgenticRunnerDeployment
 metadata:
-  name: github-agent-runner
+  name: github-agent-runner-review
   namespace: actions-runners
 spec:
   runner:
