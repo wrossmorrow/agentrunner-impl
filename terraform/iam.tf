@@ -23,6 +23,17 @@ resource "google_project_iam_member" "gke_nodes" {
   member  = "serviceAccount:${google_service_account.gke_nodes.email}"
 }
 
+resource "google_project_iam_member" "agent_router_vertex_ai" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "principal://iam.googleapis.com/projects/${data.google_project.current.number}/locations/global/workloadIdentityPools/${var.project_id}.svc.id.goog/subject/ns/ai-gateway/sa/envoy-ai-gateway-agent-router-f09a7a01"
+
+  depends_on = [
+    google_project_service.apis,
+    google_container_cluster.autopilot,
+  ]
+}
+
 resource "google_billing_budget" "monthly" {
   count = var.billing_account_id != "" ? 1 : 0
 

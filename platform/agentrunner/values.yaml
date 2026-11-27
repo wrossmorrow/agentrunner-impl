@@ -12,7 +12,7 @@ controller:
   arcVersion: ""
   arcControllerNamespace: arc-systems
   arcControllerServiceAccount: arc-gha-rs-controller
-  githubAuthImage: ghcr.io/wrossmorrow/agentrunner-github-auth:0.0.7
+  githubAuthImage: ghcr.io/wrossmorrow/agentrunner-github-auth:0.0.8
   imagePullPolicy: IfNotPresent
   leaderElect: false
   metricsBindAddress: ":8080"

@@ -36,6 +36,16 @@ spec:
         backendRequest: 180s
       backendRefs:
         - name: inkling-modal
+    - matches:
+        - headers:
+            - type: RegularExpression
+              name: x-ai-eg-model
+              value: ^gemini-.*
+      timeouts:
+        request: 180s
+        backendRequest: 180s
+      backendRefs:
+        - name: vertex-gemini
 ---
 # Allow >=180s for Modal scale-from-zero cold starts (~85s cached).
 apiVersion: gateway.envoyproxy.io/v1alpha1

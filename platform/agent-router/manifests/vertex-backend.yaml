@@ -1,0 +1,53 @@
+# Native GCP Vertex AI (Gemini) backend using GKE Workload Identity ADC (zero static API keys).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: vertex-gemini
+  namespace: ai-gateway
+spec:
+  endpoints:
+    - fqdn:
+        hostname: aiplatform.googleapis.com
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: vertex-gemini-tls
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: vertex-gemini
+  validation:
+    wellKnownCACertificates: System
+    hostname: aiplatform.googleapis.com
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: vertex-gemini
+  namespace: ai-gateway
+spec:
+  schema:
+    name: GCPVertexAI
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: vertex-gemini
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: vertex-gemini-auth
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: vertex-gemini
+  type: GCPCredentials
+  gcpCredentials:
+    projectName: agentrunner-515823
+    region: global
