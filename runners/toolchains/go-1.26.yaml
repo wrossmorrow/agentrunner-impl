@@ -3,7 +3,7 @@ kind: AgenticRunnerToolchain
 metadata:
   name: go-1.26
 spec:
-  image: ghcr.io/wrossmorrow/agentrunner-golang:0.0.12
+  image: ghcr.io/wrossmorrow/agentrunner-golang:0.0.13
   resources:
     requests:
       cpu: "2"
