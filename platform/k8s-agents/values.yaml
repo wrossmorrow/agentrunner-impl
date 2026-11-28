@@ -33,9 +33,14 @@ sessionSink:
   secretKey: token
   optional: true
 
+wakeup:
+  intervalSeconds: 30
+  githubAppSecretName: interactive-github-app
+  githubAppKeyFile: private-key.pem
+
 sandbox:
   imageRepository: ghcr.io/wrossmorrow
-  imageTag: latest
+  imageTag: "0.0.5"
   gatewayEndpoint: http://agent-router.ai-gateway.svc.cluster.local:8080/v1
   gatewaySecretName: agent-gateway-token
   idlePauseSeconds: 1200
