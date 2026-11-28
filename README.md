@@ -54,7 +54,7 @@ GitHub Actions PR/Release ──(outbound poll)──> GKE Autopilot (CPU-only, 
 ├── platform/
 │   ├── justfile                                # check, infisical-*, arc-install, agentrunner-install, gateway-*, sync, status
 │   ├── arc/values.yaml                         # ARC v2 gha-runner-scale-set-controller values
-│   ├── agentrunner/values.yaml                 # agentrunner-controller values (ghcr.io/wrossmorrow/agentrunner-github-auth:0.0.13)
+│   ├── agentrunner/values.yaml                 # agentrunner-controller values (ghcr.io/wrossmorrow/agentrunner-github-auth:0.0.14)
 │   ├── infisical/
 │   │   ├── values.yaml                         # infisical-helm-charts/secrets-operator values
 │   │   └── manifests/
@@ -78,7 +78,7 @@ GitHub Actions PR/Release ──(outbound poll)──> GKE Autopilot (CPU-only, 
     ├── policy/
     │   ├── org-review-policy.yaml              # ConfigMap (00-base.md) with language-agnostic review + JSON verdict rules
     │   └── release-notes-policy.yaml           # ConfigMap (00-base.md) for read-only release-notes drafting
-    ├── toolchains/go-1.26.yaml                 # AgenticRunnerToolchain (agentrunner-golang:0.0.13)
+    ├── toolchains/go-1.26.yaml                 # AgenticRunnerToolchain (agentrunner-golang:0.0.14)
     └── deployments/
         ├── envoy-extproc-sdk-go.yaml           # PR reviewer for wrossmorrow/envoy-extproc-sdk-go
         ├── github-agent-runner.yaml            # PR reviewer for wrossmorrow/github-agent-runner

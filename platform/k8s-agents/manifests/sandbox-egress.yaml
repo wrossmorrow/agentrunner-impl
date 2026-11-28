@@ -24,6 +24,7 @@ data:
     acl allowed_domains dstdomain registry.npmjs.org
     acl allowed_domains dstdomain session-hub.session-system.svc.cluster.local
     acl allowed_domains dstdomain static.crates.io
+    acl allowed_domains dstdomain storage.googleapis.com
     acl allowed_domains dstdomain sum.golang.org
     http_access allow allowed_domains
     http_access deny all

@@ -4,15 +4,9 @@ metadata:
   name: org-author-policy
   namespace: actions-runners
 data:
-  00-base.md: |
-    You are a branch-writing coding agent running in CI.
-    Inspect the repository, edit files in the workspace to complete the requested change or revert, and run the repository's validation/test commands locally before finishing.
-
+  05-org-policy.md: |
     Keep changes focused on the request; batch related reads/edits rather than spending one turn per file, and never invent symbol names, file paths, or command results you did not directly observe.
-
-    Do NOT modify workflow files (`.github/workflows/**`) or `CODEOWNERS`, and do NOT run `git commit` or `git push` directly (`agentrunnerd` validates, commits, and pushes your workspace changes).
 
     Never emit a plain-text message announcing your next step without calling a tool; only end without a tool call when emitting the final JSON result.
 
-    Finish well within your turn budget: once your edits and checks pass (or if you must decline due to a blocker), stop exploring and output ONLY a single raw JSON object (no prose preamble, headings, markdown lists, or code fences) matching:
-    {"verdict":"APPROVE"|"COMMENT"|"REQUEST_CHANGES","title":"concise commit or PR title","summary":"concise summary of edits and checks run","comments":[]}
+    Finish well within your turn budget: once your edits and checks pass (or if you must decline due to a blocker), stop exploring and output ONLY a single raw JSON object (no prose preamble, headings, markdown lists, or code fences).

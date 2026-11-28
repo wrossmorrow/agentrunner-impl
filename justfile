@@ -55,3 +55,42 @@ upgrade-agentrunner version:
     just runners apply-toolchains
     kubectl rollout status deployment/agentrunner-controller -n agentrunner-system --timeout=2m
 
+# Update k8s-agents chart and sandbox image version across platform files
+bump-k8s-agents version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ver="{{version}}"
+    ver="${ver#v}"
+    if [[ ! "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+        echo "Error: invalid version '${ver}' (expected e.g. 0.0.8 or v0.0.8)" >&2
+        exit 1
+    fi
+    K8S_AGENTS_VER="$ver" python3 - <<'PY'
+    import os
+    import re
+    import sys
+
+    ver = os.environ["K8S_AGENTS_VER"]
+    targets = [
+        ("platform/justfile", r'(k8s-agents-install version=")[^"]+(")', rf"\g<1>{ver}\g<2>"),
+        ("platform/k8s-agents/values.yaml", r'(imageTag:\s*)"?[^\s"]+"?', rf'\g<1>"{ver}"'),
+    ]
+
+    for path, pattern, repl in targets:
+        with open(path, "r", encoding="utf-8") as fh:
+            original = fh.read()
+        updated, count = re.subn(pattern, repl, original)
+        if count == 0:
+            sys.exit(f"Error: pattern {pattern!r} matched nothing in {path}")
+        if updated != original:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(updated)
+        print(f"Updated {path} ({count} match{'es' if count != 1 else ''}) -> {ver}")
+    PY
+    just platform check
+
+# Bump k8s-agents version, validate manifests, and roll out session-hub
+upgrade-k8s-agents version:
+    just bump-k8s-agents {{version}}
+    just platform k8s-agents-install
+

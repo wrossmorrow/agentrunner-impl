@@ -40,7 +40,7 @@ wakeup:
 
 sandbox:
   imageRepository: ghcr.io/wrossmorrow
-  imageTag: "0.0.5"
+  imageTag: "0.0.8"
   gatewayEndpoint: http://agent-router.ai-gateway.svc.cluster.local:8080/v1
   gatewaySecretName: agent-gateway-token
   idlePauseSeconds: 1200

@@ -3,7 +3,7 @@ kind: AgenticRunnerToolchain
 metadata:
   name: go-1.26
 spec:
-  image: ghcr.io/wrossmorrow/agentrunner-golang:0.0.13
+  image: ghcr.io/wrossmorrow/agentrunner-golang:0.0.14
   resources:
     requests:
       cpu: "2"
@@ -13,6 +13,7 @@ spec:
       memory: "8Gi"
   egressAllowlist:
     - proxy.golang.org
+    - storage.googleapis.com
     - sum.golang.org
   agentsMd: |
     Toolchain: Go 1.26, golangci-lint, protoc, buf, git, gh.
